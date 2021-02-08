@@ -11,7 +11,7 @@ class DIHLoss(nn.Module):
     ):
         super().__init__()
         self.recon_loss = nn.MSELoss()
-        self.pixel_loss = nn.Softmax()
+        self.pixel_loss = nn.CrossEntropyLoss()
         self.recon_loss_weight = recon_loss_weight
         self.pixel_loss_weight = pixel_loss_weight
 

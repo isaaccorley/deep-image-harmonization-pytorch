@@ -9,6 +9,6 @@ data:
 train:
   lr: 1E-8
   recon_loss_weight: 1.0
-  pixel_loss_weight: 1.0
+  pixel_loss_weight: 100.0
 
 device: cuda
