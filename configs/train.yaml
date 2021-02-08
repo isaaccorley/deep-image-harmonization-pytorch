@@ -1,0 +1,14 @@
+
+model:
+
+data:
+  input_shape: (512, 512)
+  num_classes: 25
+
+
+train:
+  lr: 1E-8
+  recon_loss_weight: 1.0
+  pixel_loss_weight: 1.0
+
+device: cuda
