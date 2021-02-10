@@ -1,7 +1,6 @@
 
-model:
-
 data:
+  dataset: ADE20K
   input_shape: (512, 512)
   num_classes: 25
 

@@ -4,8 +4,11 @@ Modified from https://github.com/paperswithcode/torchbench/blob/master/torchbenc
 
 import os
 from collections import namedtuple
+from typing import Tuple
 
+import torch
 from PIL import Image
+import torchvision.transforms as T
 from torchvision.datasets.vision import VisionDataset
 from torchvision.datasets.utils import download_and_extract_archive
 
@@ -23,31 +26,6 @@ ARCHIVE_DICT = {
 
 
 class ADE20K(VisionDataset):
-    """`ADE20K Dataset.
-    ADE20K <https://groups.csail.mit.edu/vision/datasets/ADE20K/>`_
-    Args:
-        root (string): Root directory of the ADE20K dataset
-        split (string, optional): The image split to use, ``train`` or ``val``
-        download (bool, optional): If true, downloads the dataset from the
-            internet and puts it in root directory. If dataset is already
-            downloaded, it is not downloaded again.
-        transform (callable, optional): A function/transform that takes in a
-            PIL image and returns a transformed version. E.g,
-            ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes
-            in the PIL image target and transforms it.
-        transforms (callable, optional): A function/transform that takes input
-            sample and its target as entry and returns a transformed version.
-    Examples:
-        Get dataset for training and download from internet
-        .. code-block:: python
-            dataset = ADE20K('./data/ade20k', split='train', download=True)
-            img, target = dataset[0]
-        Get dataset for validation and download from internet
-        .. code-block:: python
-            dataset = ADE20K('./data/ade20k', split='val', download=True)
-            img, target = dataset[0]
-    """
 
     ADE20KClass = namedtuple("ADE20KClass", ["name", "id", "color"])
 
@@ -246,12 +224,12 @@ class ADE20K(VisionDataset):
 
     def __init__(
         self,
-        root,
-        split="train",
-        download=False,
-        transform=None,
-        target_transform=None,
-        transforms=None,
+        root: str = "data/ade20k",
+        split: str = "train",
+        download: bool = False,
+        transform: T.Compose = None,
+        target_transform: T.Compose = None,
+        transforms: T.Compose = None,
     ):
         super(ADE20K, self).__init__(
             root, transforms, transform, target_transform
@@ -287,52 +265,38 @@ class ADE20K(VisionDataset):
         self.images = []
         self.targets = []
 
-        for file_name in os.listdir(self.images_dir):
-            self.images.append(os.path.join(self.images_dir, file_name))
-            self.targets.append(
-                os.path.join(self.targets_dir, file_name.replace("jpg", "png"))
-            )
+        for f in os.listdir(self.images_dir):
+            self.images.append(os.path.join(self.images_dir, f))
+            self.targets.append(os.path.join(
+                self.targets_dir,
+                f.replace("jpg", "png")
+            ))
 
-    def download(self):
-        if not os.path.isdir(self.images_dir) or not os.path.isdir(
+        if (
+            self.transforms is None and
+            self.transform is not None and
+            self.target_transform is not None
+        ):
+            self.transforms = lambda x: (self.transform(x[0]), self.target_transform(x[1]))
+
+    def download(self) -> None:
+        if not os.path.exists(self.images_dir) or not os.path.exists(
             self.targets_dir
         ):
-
             archive_dict = ARCHIVE_DICT["trainval"]
             download_and_extract_archive(
-                archive_dict["url"],
-                self.root,
+                url=archive_dict["url"],
+                download_root=self.root,
                 extract_root=self.root,
                 md5=archive_dict["md5"],
+                remove_finished=True
             )
 
-        else:
-            msg = (
-                "You set download=True, but a folder VOCdevkit already exist "
-                "in the root directory. If you want to re-download or "
-                "re-extract the archive, delete the folder."
-            )
-            print(msg)
-
-    def __getitem__(self, index):
-        """Getitem special method.
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target)
-        """
-
-        image = Image.open(self.images[index]).convert("RGB")
-        target = Image.open(self.targets[index])
-
-        if self.transforms is not None:
-            image, target = self.transforms(image, target)
-
-        return image, target
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = Image.open(self.images[idx]).convert("RGB")
+        y = Image.open(self.targets[idx])
+        x, y = self.transforms(x, y)
+        return x, y
 
     def __len__(self):
         return len(self.images)
-
-    def extra_repr(self):
-        lines = ["Split: {split}"]
-        return "\n".join(lines).format(**self.__dict__)
